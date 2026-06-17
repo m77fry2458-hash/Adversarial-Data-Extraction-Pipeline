@@ -1,0 +1,976 @@
+from DrissionPage import ChromiumPage, ChromiumOptions
+import time
+import os
+import subprocess
+import json
+import hashlib
+import base64
+import re
+import random
+import calendar
+import sys  # 👈 新增导入 sys 模块，用于安全停机
+
+# ======================================================================================================================
+# ⚙️ 基础配置
+# ======================================================================================================================
+BAT_PATH = r"C:\Users\Administrator\Desktop\启动Edge.bat"
+CAPTCHA_DB_FILE = "../captcha_fingerprints.json"
+
+# 👇👇👇 [改动 1] 替换为目前能用的账号 👇👇👇
+ACCOUNT_POOL = [
+    # {"u": "123456789", "p": "123456789"},#11：00前不可用
+     
+
+#  
+TEST_TASK = {
+    "start": "2024-01-01",
+    "end": "2024-02-01"
+}
+
+TARGET_COUNT = 599 # 单个任务的目标总数可在此设置
+
+#  
+SAVE_DIR = r"E:\data analysis base\TXT_Data"
+
+#  
+TOLERANCE_MARGIN = 50  # 👈 容差阈值
+#  
+
+#  
+TASKS = [
+    # 🔹 
+    #{"start": "2014-01-01", "end": "2014-01-15", "desc": "2014-01上"},
+    #{"start": "2014-01-16", "end": "2014-01-31", "desc": "2014-01下"},
+    #{"start": "2014-05-16", "end": "2014-05-31", "desc": "2014-05下"},
+   # {"start": "2014-07-01", "end": "2014-07-15", "desc": "2014-07上"},
+   # {"start": "2014-12-01", "end": "2014-12-15", "desc": "2014-12上"},
+
+    # 🔹  
+   # {"start": "2015-05-01", "end": "2015-05-15", "desc": "2015-05上"},
+    #{"start": "2015-07-16", "end": "2015-07-31", "desc": "2015-07下"},
+   # {"start": "2015-12-01", "end": "2015-12-15", "desc": "2015-12上"},
+ #   {"start": "2015-12-16", "end": "2015-12-31", "desc": "2015-12下"},
+
+    # 🔹  
+  #  {"start": "2016-01-01", "end": "2016-01-15", "desc": "2016-01上"},
+  #  {"start": "2016-01-16", "end": "2016-01-31", "desc": "2016-01下"},
+   # {"start": "2016-02-01", "end": "2016-02-15", "desc": "2016-02上"},
+   # {"start": "2016-02-16", "end": "2016-02-29", "desc": "2016-02下"},
+   # {"start": "2016-05-16", "end": "2016-05-31", "desc": "2016-05下"},
+  #  {"start": "2016-12-01", "end": "2016-12-15", "desc": "2016-12上"},
+  #  {"start": "2016-12-16", "end": "2016-12-31", "desc": "2016-12下"},
+
+    # 🔹  
+  #  {"start": "2017-01-16", "end": "2017-01-31", "desc": "2017-01下"},
+  #  {"start": "2017-04-16", "end": "2017-04-30", "desc": "2017-04下"},
+   # {"start": "2017-07-16", "end": "2017-07-31", "desc": "2017-07下"},
+   # {"start": "2017-09-01", "end": "2017-09-15", "desc": "2017-09上"},
+   # {"start": "2017-09-16", "end": "2017-09-30", "desc": "2017-09下"},
+   # {"start": "2017-10-16", "end": "2017-10-31", "desc": "2017-10下"},
+   # {"start": "2017-12-01", "end": "2017-12-15", "desc": "2017-12上"},
+
+    # 🔹  
+    #{"start": "2018-01-16", "end": "2018-01-31", "desc": "2018-01下"},
+    #{"start": "2018-03-16", "end": "2018-03-31", "desc": "2018-03下"},
+
+    # 🔹  
+    #{"start": "2019-01-01", "end": "2019-01-15", "desc": "2019-01上"},
+   # {"start": "2019-01-16", "end": "2019-01-31", "desc": "2019-01下"},
+    #{"start": "2019-02-01", "end": "2019-02-15", "desc": "2019-02上"},
+    #{"start": "2019-02-16", "end": "2019-02-28", "desc": "2019-02下"},
+    #{"start": "2019-03-01", "end": "2019-03-15", "desc": "2019-03上"},
+   # {"start": "2019-03-16", "end": "2019-03-31", "desc": "2019-03下"},
+  # {"start": "2019-04-01", "end": "2019-04-15", "desc": "2019-04上"},
+    #{"start": "2019-04-16", "end": "2019-04-30", "desc": "2019-04下"},
+    #{"start": "2019-05-01", "end": "2019-05-15", "desc": "2019-05上"},
+   # {"start": "2019-09-01", "end": "2019-09-15", "desc": "2019-09上"},
+    #{"start": "2019-09-16", "end": "2019-09-30", "desc": "2019-09下"},
+
+    # 🔹 
+    {"start": "2026-01-01", "end": "2026-12-31", "desc": "2026全年"}
+]
+
+#  
+#for year in range(2020, 2019, -1):
+    #for month in range(12, 0, -1):
+        #last_day = calendar.monthrange(year, month)[1]
+        #TASKS.append({"start": f"{year}-{month:02d}-01", "end": f"{year}-{month:02d}-{last_day}", "desc": f"{year}-{month:02d}"})
+
+# 
+#for year in range(2015, 2013, -1):
+    #for month in range(12, 0, -1):
+       # last_day = calendar.monthrange(year, month)[1]
+       # TASKS.append({"start": f"{year}-{month:02d}-16", "end": f"{year}-{month:02d}-{last_day}", "desc": f"{year}-{month:02d}下"})
+        #TASKS.append({"start": f"{year}-{month:02d}-01", "end": f"{year}-{month:02d}-15", "desc": f"{year}-{month:02d}上"})
+
+#  
+#for month in range(12, 0, -1):
+    #last_day = calendar.monthrange(2013, month)[1]
+   # TASKS.append({
+     #   "start": f"2013-{month:02d}-01",
+      #  "end": f"2013-{month:02d}-{last_day}",
+       # "desc": f"2013年-{month:02d}月"   })
+
+# 
+#TASKS.append({"start": "2012-01-01", "end": "2012-12-31", "desc": "2012全年"})
+#TASKS.append({"start": "1988-01-01", "end": "2011-12-31", "desc": "1988-2011历史合并"})
+
+# ======================================================================================================================
+# 🛠️ 辅助函数
+# ======================================================================================================================
+def check_waf_block(page):
+    """WAF 防火墙与 500 报错雷达检测"""
+    try:
+        html_text = page.html
+       
+        waf_keywords = [ "IP"]
+        for kw in waf_keywords:
+            if kw in html_text:
+                return kw
+        return None
+    except:
+        return None
+
+
+def load_json(file, default):
+    if os.path.exists(file):
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return default
+
+def kill_browser():
+    print("💀 正在清理旧浏览器进程...")
+    os.system('taskkill /F /IM msedge.exe >nul 2>&1')
+    time.sleep(2)
+
+def start_browser():
+    print("🔥 正在启动浏览器...")
+    if not os.path.exists(BAT_PATH):
+        print("❌ 错误：找不到启动脚本！")
+        return None
+    subprocess.Popen(f'"{BAT_PATH}"', shell=True)
+    print("   ⏳ 等待浏览器预热 (8秒)...")
+    time.sleep(8)
+    try:
+        return ChromiumPage(addr_or_opts=9222)
+    except:
+        print("❌ 连接浏览器失败")
+        return None
+
+def clean_filename(text):
+    """清洗文件名，去除非法字符"""
+    return re.sub(r'[\\/:*?"<>|]', '_', text)
+
+def bio_wandering(page):
+    """首页仿生游走：模拟人类在检索前的随机浏览行为"""
+    print("🎨 [行为模拟] 首页仿生游走中，模拟真实用户呆滞...")
+    try:
+        for _ in range(random.randint(2, 4)):
+            scroll_dist = random.randint(300, 700)
+            page.run_js(f'window.scrollBy({{top: {scroll_dist}, behavior: "smooth"}});')
+            time.sleep(random.uniform(2.0, 4.0))
+            if random.random() < 0.3:
+                page.run_js(f'window.scrollBy({{top: -200, behavior: "smooth"}});')
+
+        targets = ['text:使用帮助', 'text:公告', '.menu_sub']
+        for t in targets:
+            ele = page.ele(t, timeout=1)
+            if ele:
+                ele.hover()
+                print(f"   👀 视线停留在: {t}")
+                time.sleep(random.uniform(3, 6))
+                break
+    except:
+        pass
+
+def account_logout(page):
+    """安全退出：模拟人类手动注销账号"""
+    print("🚪 [账号保护] 正在执行注销退出...")
+    try:
+        logout_btn = page.ele('#logout', timeout=3) or page.ele('text:退出', timeout=3)
+        if logout_btn:
+            logout_btn.click()
+            time.sleep(2)
+            print("   ✅ 账号已安全下线")
+    except:
+        print("   ⚠️ 退出失败，可能已自动掉线")
+
+
+def smash_edge_popups(page):
+    """暴力粉碎 Edge 首次运行的隐私/同步/欢迎弹窗"""
+    print("   🔨 [弹窗粉碎] 正在检测 Edge 顽固引导页...")
+    
+    targets = [
+        'text:明白', 'text:我接受', 'text:全部拒绝',
+        'text:不，谢谢', 'text:Not now',
+        'text:不，谢谢', 'text:No, thanks',
+        'text:接受', 'text:Accept',
+        'text:确定', 'text:Confirm',
+        'text:开始', 'text:Start',
+        'text:完成', 'text:Finish',
+        'text:也许以后', 'text:Maybe later'
+    ]
+    for _ in range(5):
+        # 扩大侦测范围，把微软的隐私弹窗网址也包含进去
+        if "edge://" not in page.url and "microsoft-edge" not in page.url and "microsoft.com" not in page.url:
+            break
+
+        found_any = False
+        for t in targets:
+            btn = page.ele(t, timeout=0.5)
+            if btn:
+                print(f"      👉 点击按钮: [{t}]")
+                try:
+                    # 👇 核心升级：改用底层 JS 强行穿透点击，无视任何遮挡
+                    btn.click(by_js=True)
+                    found_any = True
+                    time.sleep(1)
+                except:
+                    pass
+
+        if not found_any:
+            try:
+                if "edge://" in page.url or "microsoft.com" in page.url:
+                    page.get("about:blank")
+            except:
+                pass
+            time.sleep(1)
+
+    print("   🔨 [弹窗粉碎] 结束，准备进入主流程...")
+
+def calculate_resume_coordinates(file_count):
+    if file_count < 5:
+        return 1, file_count
+    remaining = file_count - 5
+    page_add = remaining // 15
+    current_idx = remaining % 15
+    target_page = 1 + page_add + 1
+    if current_idx == 0 and remaining > 0:
+        target_page = 1 + page_add
+        return target_page, 15
+    return target_page, current_idx
+
+
+# ======================================================================================================================
+# 🧪 核心：V80 显微镜级登录模块 (纯净强攻版：彻底拆除探雷器 + 三轮验证码)
+# ======================================================================================================================
+def debug_login_process(page, user, pwd):
+    t_print = lambda msg: print(f"[{time.strftime('%H:%M:%S')}] {msg}")
+    t_print(f"🚀 [V80] 开始执行登录调试 (当前账号: {user})...")
+
+    url = "https://wenshu.court.gov.cn/website/wenshu/181107ANFZ0BXSK4/index.html"
+    page.get(url)
+    time.sleep(3)  # 给页面一点渲染时间
+
+    # 🛑 已经彻底删除了进门探雷代码 (check_waf_block)，不管白屏还是服务器报错，直接往下硬闯！ 🛑
+
+    if page.ele('#cprqStart', timeout=3):
+        t_print("✅ 检测到【日期框】，说明当前已是登录状态！")
+        return True
+
+    t_print("🔒 当前未登录，准备寻找登录入口...")
+    iframe = page.get_frame('#contentIframe')
+    if not iframe:
+        t_print("   ⚠️ 页面上没看到登录框 Iframe，尝试点击【登录】按钮触发...")
+        login_btn = page.ele('text:登录') or page.ele('#loginLi')
+        if login_btn:
+            login_btn.click(by_js=True)
+            t_print("   👆 点击了登录按钮，等待弹窗...")
+            time.sleep(3)
+            iframe = page.get_frame('#contentIframe')
+
+    if not iframe:
+        t_print("❌ 致命错误：无法定位到 id='contentIframe' 的登录框！")
+        return False
+    else:
+        t_print("✅ 成功锁定登录 Iframe")
+
+    t_print("   ✍️ 正在填写账号密码...")
+    try:
+        u_input = iframe.ele('css:input[placeholder*="手机"]') or iframe.ele('css:input[name="username"]')
+        p_input = iframe.ele('css:input[placeholder*="密码"]') or iframe.ele('css:input[name="password"]')
+
+        if u_input and p_input:
+            u_input.clear()
+            u_input.input(user)
+            time.sleep(3)
+
+            p_input.clear()
+            p_input.input(pwd)
+            time.sleep(3)
+
+            t_print("      ✅ 账号密码已填入")
+        else:
+            t_print("      ❌ 错误：找不到账号或密码输入框！")
+            return False
+    except Exception as e:
+        t_print(f"      ❌ 填表异常: {e}")
+        return False
+
+    # 👇 三轮被动读取机制
+    for attempt in range(1, 4):
+        t_print(f"\n   🧩 [第 {attempt}/3 轮] 正在提取网页验证码...")
+        try:
+            img_ele = iframe.ele('.captcha-img')
+            if not img_ele:
+                t_print("      ❌ 错误：找不到验证码图片元素 (.captcha-img)")
+                return False
+
+            src = img_ele.attr('src')
+            if not src or "base64" not in src:
+                t_print(f"      ❌ 错误：图片 src 不是 Base64 格式...")
+                return False
+
+            base64_data = src.split("base64,")[1]
+            img_bytes = base64.b64decode(base64_data)
+            img_hash = hashlib.md5(img_bytes).hexdigest()
+            t_print(f"      📸 图片哈希值: {img_hash}")
+
+            db = load_json(CAPTCHA_DB_FILE, {})
+            if img_hash in db:
+                code = db[img_hash]
+                t_print(f"      🧠 指纹库匹配成功: [{code}]")
+                code_input = iframe.ele('css:input[placeholder*="验证码"]')
+                if code_input:
+                    code_input.clear()
+                    code_input.input(code)
+                    t_print(f"      ✅ 验证码 [{code}] 已填入输入框")
+                    time.sleep(3)
+                else:
+                    return False
+            else:
+                t_print(f"      ❌ 失败：此验证码指纹 ({img_hash}) 不在库中！")
+                if attempt < 3:
+                    t_print("      ⏳ 怀疑网页正在暗中刷新图片，静待 4 秒后重新抓取...")
+                    time.sleep(4)
+                    continue
+                else:
+                    return False
+
+            t_print(f"   👆 [第 {attempt} 轮] 准备点击登录按钮...")
+            for i in range(1, 3):
+                t_print(f"      [{i}/2] 点击登录...")
+                login_btn = iframe.ele('text:登录') or iframe.ele('.login-button-container')
+
+                time.sleep(3)
+
+                if login_btn:
+                    login_btn.click(by_js=True)
+
+                if page.ele('#cprqStart', timeout=3):
+                    t_print("   🎉🎉🎉 登录成功！")
+                    return True
+
+                t_print("      ⚠️ 未跳转，等待重试...")
+                time.sleep(4)
+
+                if page.ele('#cprqStart', timeout=1):
+                    t_print("   🎉 延迟跳转成功！")
+                    return True
+
+            if attempt < 3:
+                t_print("   🚨 两次点击无响应！怀疑网页已悄悄更换验证码，准备重新提取比对...")
+                time.sleep(4)
+
+        except Exception as e:
+            t_print(f"      ❌ 本轮验证码处理异常: {e}")
+            if attempt == 3:
+                return False
+
+    t_print("❌ 三轮静默读取与尝试均失败，放弃挣扎，准备重启浏览器...")
+    return False
+
+
+# ======================================================================================================================
+# 🤖 步骤二：检索 (致敬经典：完美融合老经验与新防御)
+# ======================================================================================================================
+def step_2_setup_search(page, task_info):
+    print("\n[Step 2] 初始化检索...")
+    try:
+        # 完全回归你的原始判断
+        if not page.ele('#s1', timeout=2):
+            page.ele('text:高级检索').click(by_js=True)
+            time.sleep(2)
+
+        print("   🔍 切换 [刑事案件]...")
+        page.ele('#selectCon_other_ajlx').click(by_js=True)
+        time.sleep(0.5)
+        page.ele('css:li[data-val="02"]').click(by_js=True)
+        print("      ⏳ 等待面板刷新...")
+        time.sleep(4)
+
+        print("   ✍️ 填入案件名称: 伐")
+        page.run_js('document.getElementById("s1").value = "伐";')
+
+        print("   🔍 选择 [判决书]...")
+        page.run_js('document.getElementById("s6").click();')
+        time.sleep(0.5)
+        page.run_js('document.querySelector("#gjjs_wslx li[data-val=\'01\']").click();')
+
+        print("   🔍 选择 [刑事一审]...")
+        if page.ele('#0201_anchor', timeout=3):
+            page.run_js('document.getElementById("0201_anchor").click();')
+        else:
+            page.run_js('$("#spcxTreeDiv").jstree("select_node", "0201");')
+
+        # ===============================================================================================================
+        # 🟢 核心：完全照搬您的“古老成功经验” (唤醒 -> 注入 -> 收起)
+        # ===============================================================================================================
+        print(f"   📅 设定日期: {task_info['start']} - {task_info['end']}")
+
+        # 【处理起始日期】
+        if page.ele('#cprqStart'):
+            # 1. JS点击唤醒日历 (防掉参数的魔法第一步)
+            page.ele('#cprqStart').click(by_js=True)
+            time.sleep(0.5)
+
+        # 2. JS底层强行注入
+        page.run_js(f"""
+            var s = document.getElementById('cprqStart');
+            s.value = '{task_info['start']}';
+            s.dispatchEvent(new Event('input', {{bubbles: true}}));
+            s.dispatchEvent(new Event('change', {{bubbles: true}}));
+        """)
+
+        # 3. JS点击空白处收起日历，迫使 Vue 锁定状态 (防掉参数的魔法第二步)
+        if page.ele('#s1'):
+            page.ele('#s1').click(by_js=True)
+        time.sleep(1.0)
+
+        # 【处理结束日期】
+        if page.ele('#cprqEnd'):
+            page.ele('#cprqEnd').click(by_js=True)
+            time.sleep(1.0)
+
+        page.run_js(f"""
+            var e = document.getElementById('cprqEnd');
+            e.value = '{task_info['end']}';
+            e.dispatchEvent(new Event('input', {{bubbles: true}}));
+            e.dispatchEvent(new Event('change', {{bubbles: true}}));
+        """)
+
+        if page.ele('#s1'):
+            page.ele('#s1').click(by_js=True)
+
+        print("   ⏳ 等待日历控件将数据封装进底层系统 (3秒)...")
+        time.sleep(3.0)
+
+        # ===============================================================================================================
+        # 🟢 检索按钮：纯 JS 穿透点击 (彻底解决 VPN 下元素无位置的报错)
+        # ===============================================================================================================
+        print("   🚀 点击检索...")
+        page.run_js('var btn = document.getElementById("searchBtn"); if(btn) btn.click();')
+
+        print("   ⏳ 等待新列表渲染 (8秒)...")
+        time.sleep(8.0)
+
+
+
+        return True
+
+    except Exception as e:
+        print(f"❌ 检索出错: {e}")
+        return False
+
+
+# ======================================================================================================================
+# 🤖 步骤三：【拆除暴力刷新 + 单次长时限耐心等待 + 遇阻果断放弃】
+# ======================================================================================================================
+def step_3_harvest_limited(page, needed_count, task_info, global_acc_count=0):
+    def t_print(msg):
+        print(f"[{time.strftime('%H:%M:%S')}] {msg}")
+
+    t_print(f"\n[Step 3] 进入任务: 【{task_info['desc']}】 (本批需分析: {needed_count} 条)")
+    current_task_dir = os.path.join(SAVE_DIR, task_info['desc'])
+    if not os.path.exists(current_task_dir): os.makedirs(current_task_dir)
+
+    items = page.eles('.LM_list')
+    target_items = items[:needed_count]
+    results = []
+    session_increment = 0
+
+    for index, item in enumerate(target_items):
+        if global_acc_count + session_increment >= 599: break
+
+        try:
+            title_ele = item.ele('.caseName')
+            title, date = title_ele.text, item.ele('.cprq').text
+            file_path = os.path.join(current_task_dir, f"{clean_filename(title)}_{date}.txt")
+
+            if os.path.exists(file_path):
+                t_print(f"   ⏩ 已存在，跳过: {title[:12]}...")
+                results.append({"title": title})
+                continue
+
+            t_print(f"\n   [{index + 1}/{len(target_items)}] 正在处理: {title[:15]}...")
+
+             
+            title_ele.click(by_js=True)
+            time.sleep(1.5)
+
+            try:
+                detail_tab = page.latest_tab
+            except Exception:
+                t_print("      🚨 无法获取新标签页，跳过此案件")
+                continue
+
+            got_content = False
+            start_wait = time.time()
+            full_text = ""
+
+            
+            while time.time() - start_wait < 12.0:
+                try:
+                    container = detail_tab.ele('.PDF_pox') or detail_tab.ele('.PDF_box') or detail_tab.ele('body')
+                    if container:
+                        text = container.text.strip()
+
+                        
+                        if "参数错误" in text or "请求存在异常" in text:
+                            t_print("      🛑 遭遇网关拦截页 (参数/异常)！")
+                            break
+
+                        if len(text) > 50:
+                            full_text = text
+                            got_content = True
+                            break
+                        elif "不公开理由" in text or "不宜在互联网公布" in text:
+                            full_text = "【系统提示：该案件因法定情形不公开】\n" + text
+                            got_content = True
+                            break
+                except Exception:
+                    pass
+                time.sleep(0.5)
+
+            if got_content:
+                t_print(f"      ✅ 获取正文 ({len(full_text)}字)")
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(f"标题: {title}\n日期: {date}\n" + "-" * 50 + "\n" + full_text)
+                t_print(f"      💾 已保存")
+                session_increment += 1
+            else:
+                t_print("      💀 12秒内未加载出有效正文，为保安全果断放弃，跳过！")
+
+                
+                try:
+                    detail_tab.close()
+                except Exception:
+                    pass
+
+                
+                safe_sleep = random.uniform(1.5, 2.5)
+                t_print(f"      🛡️ 触发单篇防封锁冷却，暂停 {safe_sleep:.1f} 秒...")
+                time.sleep(safe_sleep)
+
+        except Exception as e:
+            if "CDP_FATAL_TIMEOUT" in str(e):
+                t_print(f"[{time.strftime('%H:%M:%S')}]       🚨 接收到自毁指令，准备全局重启...")
+                raise e
+            t_print(f"[{time.strftime('%H:%M:%S')}]       🚨 外部异常跳过: {e}")
+            try:
+                page.latest_tab.close()
+            except:
+                pass
+           
+            time.sleep(random.uniform(1.5, 2.5))
+          
+    return results, session_increment
+
+
+# ======================================================================================================================
+# 🛠️ 启动函数 (终极隐身版：物理洗白 + 真实指纹 + 底层反检测)
+# ======================================================================================================================
+def start_browser():
+    print("🔥 正在初始化纯净仿生浏览器...")
+    if not os.path.exists(BAT_PATH):
+        print(f"❌ 错误：找不到启动脚本 {BAT_PATH}")
+        return None
+
+     
+    resolutions = [(1920, 1080), (1440, 900), (1600, 900), (1536, 864)]
+    w, h = random.choice(resolutions)
+
+    
+    subprocess.Popen(f'"{BAT_PATH}"', shell=True)
+    print(f"   ⏳ 正在连接新生窗口 (原生指纹, 分辨率: {w}x{h})...")
+    time.sleep(8)
+
+    try:
+        co = ChromiumOptions().set_paths(local_port=9222)
+       
+        co.set_browser_path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
+      
+
+        co.set_argument('--disable-ipv6')
+        co.set_argument('--disable-blink-features=AutomationControlled')
+     
+        co.set_argument('--disable-web-security')
+        co.set_argument('--disable-features=IsolateOrigins,site-per-process')
+
+        page = ChromiumPage(addr_or_opts=co)
+
+       
+        page.run_js('Object.defineProperty(navigator, "webdriver", {get: () => undefined})')
+        page.set.window.size(w, h)
+
+      
+        smash_edge_popups(page)
+       
+
+      
+        try:
+            page.set.window.min()
+            print("   🔽 浏览器已强制最小化，进入后台静默运行模式...")
+        except:
+            pass
+
+        try:
+            page.get("https://wenshu.court.gov.cn/")
+        except:
+            pass
+        print("   ✅ 原生隐身环境接管成功！")
+        return page
+    except Exception as e:
+        print(f"❌ 连接浏览器失败: {e}")
+        return None
+
+
+# ======================================================================================================================
+# 🚀 最终运行入口 (暴力高频 + 全局时间戳日志 + 本地目标配置 + 容错降级队列)
+# ======================================================================================================================
+if __name__ == "__main__":
+    # 🟢 全局时间戳打印辅助函数
+    def t_print(msg):
+        print(f"[{time.strftime('%H:%M:%S')}] {msg}")
+
+
+    TOTAL_SESSION_DOWNLOADS = 0
+    CURRENT_ACC_INDEX = 0
+    ACCOUNT_SAFE_LIMIT = 399
+    ACCOUNTS_USED_TODAY = 1
+
+    consecutive_failures = 0  # 🟢 [新增] 账号连续失败计数器
+
+    t_print("=" * 60)
+    t_print(f"🎯 总任务量: {len(TASKS)} 个时间段")
+    t_print(f"👥 启用账号池: {len(ACCOUNT_POOL)} 个 (每抓 {ACCOUNT_SAFE_LIMIT} 篇轮换, 连续失败3次排队尾)")
+    t_print("=" * 60)
+
+    try:
+        task_idx = 0
+        while task_idx < len(TASKS):
+            current_task = TASKS[task_idx]
+            current_task_dir = os.path.join(SAVE_DIR, current_task['desc'])
+
+            if not os.path.exists(current_task_dir):
+                os.makedirs(current_task_dir)
+                existing_count = 0
+            else:
+                existing_files = [f for f in os.listdir(current_task_dir) if
+                                  f.endswith('.txt') and not f.startswith('_')]
+                existing_count = len(existing_files)
+
+            target_file = os.path.join(current_task_dir, "_目标数量.txt")
+            local_target = None
+            if os.path.exists(target_file):
+                try:
+                    with open(target_file, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        match = re.search(r'\d+', content)
+                        if match: local_target = int(match.group())
+                except:
+                    pass
+
+            t_print(f"\n📂 任务检查: 【{current_task['desc']}】 (本地实有文书: {existing_count} 篇)")
+
+            if local_target is not None:
+                t_print(f"   🔒 发现本地配置，当前目标被强制锁定为: {local_target} 篇")
+
+            check_target = local_target if local_target is not None else TARGET_COUNT
+
+             
+            if existing_count > 0 and existing_count >= (check_target - TOLERANCE_MARGIN):
+                t_print(
+                    f"⏩ [免考通过] 实装 {existing_count} 篇 / 目标 {check_target} 篇。在允许误差 ({TOLERANCE_MARGIN}篇) 内，自动跳过！")
+                task_idx += 1
+                continue
+
+            jump_to_page = 1
+            if existing_count > 0:
+                jump_to_page = 1 + (existing_count // 5)
+            t_print(f"   📍 策略: 将尝试空降至第 {jump_to_page} 页")
+
+            all_data = []
+            is_task_completely_finished = False
+
+            while not is_task_completely_finished:
+                # =========================================================================
+                # 🟢 正常抓满上限后的换号逻辑
+                # =========================================================================
+                if TOTAL_SESSION_DOWNLOADS >= ACCOUNT_SAFE_LIMIT:
+                    t_print(f"\n🛑 [轮换警报] 账号已抓取 {TOTAL_SESSION_DOWNLOADS} 篇，触发接力...")
+                    ACCOUNTS_USED_TODAY += 1
+                    if ACCOUNTS_USED_TODAY > len(ACCOUNT_POOL):
+                        t_print("\n" + "🛑" * 25)
+                        t_print(f"⛔ [今日兵力耗尽] {len(ACCOUNT_POOL)} 个账号退役！程序主动停机保护。")
+                        t_print("🛑" * 25 + "\n")
+                        kill_browser()
+                        sys.exit(0)
+
+                    CURRENT_ACC_INDEX = (CURRENT_ACC_INDEX + 1) % len(ACCOUNT_POOL)
+                    t_print(
+                        f"🔄 [无缝切换] 第 {ACCOUNTS_USED_TODAY} 号选手上场 -> {ACCOUNT_POOL[CURRENT_ACC_INDEX]['u']}")
+                    kill_browser()
+                    TOTAL_SESSION_DOWNLOADS = 0
+                    consecutive_failures = 0
+
+                    t_print("   ☕ 换号交接班，强制休息 3 分钟，避开高频检测...")
+                    time.sleep(random.uniform(180, 240))
+
+                    t_print("   📊 正在重新清点本地文件，计算新选手的空降坐标...")
+                    existing_files = [f for f in os.listdir(current_task_dir) if
+                                      f.endswith('.txt') and not f.startswith('_')]
+                    existing_count = len(existing_files)
+                    all_data = []
+                    jump_to_page = 1 + (existing_count // 5) if existing_count > 0 else 1
+                    t_print(f"   📍 [断点重算] 接力选手将直接空降至第 {jump_to_page} 页 (目前实存 {existing_count} 篇)")
+
+                    t_print("⚡ 重启浏览器继续工作...")
+
+                current_acc = ACCOUNT_POOL[CURRENT_ACC_INDEX]
+                t_print(f"\n♻️ [环境启动] 当前账号: {current_acc['u']} | 本轮已抓: {TOTAL_SESSION_DOWNLOADS}")
+
+                kill_browser()
+                page = start_browser()
+
+                try:
+                    if page:
+                        page.get("https://wenshu.court.gov.cn/")
+                        bio_wandering(page)
+
+                        if debug_login_process(page, current_acc['u'], current_acc['p']):
+                            if step_2_setup_search(page, current_task):
+
+                                consecutive_failures = 0
+                                time.sleep(2)
+
+                                # 👇👇👇 [核心修复 1：拦截“0篇/暂无数据”的空包弹] 👇👇👇
+                                if page.ele('text:暂无数据',
+                                            timeout=2) or "共检索到 0 篇" in page.html or "共检索到0篇" in page.html.replace(
+                                        " ", ""):
+                                    t_print(
+                                        f"   🈳 [空数据判定] 该时间段 ({current_task['desc']}) 确实没有任何案件！安全跳过...")
+                                    is_task_completely_finished = True
+                                    break
+                                # 👆👆👆 ========================================= 👆👆👆
+
+                                task_target = TARGET_COUNT
+                                try:
+                                    html_text = page.html
+                                    match = re.search(r'共检索到\s*<span[^>]*>\s*([\d,]+)\s*</span>\s*篇文书',
+                                                      html_text)
+                                    web_total = TARGET_COUNT
+                                    if match:
+                                        web_total = int(match.group(1).replace(',', ''))
+                                    else:
+                                        count_ele = page.ele('css:.con_right', timeout=1)
+                                        if count_ele:
+                                            match2 = re.search(r'共检索到(\d+)篇',
+                                                               count_ele.text.replace(',', '').replace(' ', ''))
+                                            if match2: web_total = int(match2.group(1))
+
+                                    if local_target is not None:
+                                        task_target = local_target
+                                        t_print(
+                                            f"   📊 [动态雷达] 网页显示: {web_total} 篇 | 🔒 遵从本地配置: {task_target} 篇")
+                                    else:
+                                        task_target = min(web_total, TARGET_COUNT)
+                                        t_print(
+                                            f"   📊 [动态雷达] 锁定总计: {web_total} 篇 | 阈值自适应: {task_target} 篇")
+                                        try:
+                                            with open(target_file, "w", encoding="utf-8") as f:
+                                                f.write(
+                                                    f"{task_target}\n\n# 【系统自动生成】\n# 这是本时间段的目标文书总数。")
+                                            local_target = task_target
+                                        except:
+                                            pass
+                                except:
+                                    pass
+
+                                if existing_count >= task_target:
+                                    t_print(f"   ✅ [智能截断] 已覆盖总数 {task_target} 篇！")
+                                    is_task_completely_finished = True
+                                    break
+
+                                if len(all_data) == 0 and jump_to_page > 1:
+                                    t_print(f"   🚀 目标在第 {jump_to_page} 页，启动【极速弹性快进】...")
+                                    for p in range(1, jump_to_page):
+                                        current_first_case = page.ele('.caseName').text if page.ele(
+                                            '.caseName') else "EMPTY"
+
+                                        next_btn = page.ele('text:下一页')
+                                        if next_btn and "disabled" not in next_btn.attr("class"):
+                                            next_btn.click(by_js=True)
+                                            t_print(f"      ⏩ 正在飞往第 {p + 1} 页...")
+                                            time.sleep(1.5)  # 翻页冷却时间
+
+                                            for _ in range(3):
+                                                check_ele = page.ele('.caseName', timeout=0.5)
+                                                if check_ele and check_ele.text != current_first_case:
+                                                    break
+                                                time.sleep(0.5)
+                                        else:
+                                            t_print("      ⚠️ 提前触底或按钮被禁用，停止快进。")
+                                            break
+
+                                    t_print(f"   ✅ 快进结束，已精准落地在第 {jump_to_page} 页，接力收割...")
+                                    time.sleep(2)
+
+                                while True:
+                                    needed = task_target - existing_count - len(all_data)
+                                    if needed <= 0: needed = 5
+
+                                    current_first_case = page.ele('.caseName').text if page.ele(
+                                        '.caseName') else "EMPTY"
+
+                                    new_batch, batch_inc = step_3_harvest_limited(page, needed, current_task,
+                                                                                  TOTAL_SESSION_DOWNLOADS)
+
+                                    if TOTAL_SESSION_DOWNLOADS + batch_inc >= ACCOUNT_SAFE_LIMIT:
+                                        TOTAL_SESSION_DOWNLOADS += batch_inc
+                                        break
+
+                                    next_btn = page.ele('text:下一页')
+                                    if next_btn and "disabled" not in next_btn.attr("class"):
+                                        t_print("   👉 尝试翻向下一页...")
+                                        time.sleep(1.5)
+                                        next_btn.click(by_js=True)
+
+                                        is_page_turned = False
+                                        for _ in range(5):
+                                            time.sleep(1.0)
+                                            check_ele = page.ele('.caseName')
+                                            if check_ele and check_ele.text != current_first_case:
+                                                is_page_turned = True
+                                                break
+
+                                        if is_page_turned:
+                                            t_print("   ✅ 翻页成功！")
+                                            all_data.extend(new_batch)
+                                            TOTAL_SESSION_DOWNLOADS += batch_inc
+                                        else:
+                                            t_print("   🚨 [BUG拦截] 翻页假死！强行重试...")
+                                            next_btn.click(by_js=True)
+                                            time.sleep(3)
+                                    else:
+                                        # 👇👇👇 [核心修复 2：增加空页双保险探针] 👇👇👇
+                                        if page.ele('.LM_list', timeout=1):
+                                            current_total_acquired = existing_count + len(all_data) + len(new_batch)
+                                            all_data.extend(new_batch)
+                                            TOTAL_SESSION_DOWNLOADS += batch_inc
+                                            t_print(
+                                                f"   🏁 本任务段正常触底！(实抓 {current_total_acquired} 篇 / 理论目标 {task_target} 篇)。")
+                                            t_print(
+                                                "      💡 提示：数量误差属于文书网内部去重或非公开过滤，安全结束该时段！")
+                                            is_task_completely_finished = True
+                                            break
+                                        elif page.ele('text:暂无数据', timeout=1):
+                                            t_print("   🈳 [空数据判定] 当前列表确实为空，安全结束该时段！")
+                                            is_task_completely_finished = True
+                                            break
+                                        else:
+                                            t_print(f"   🚨 致命异常：【下一页】与【文书列表】双双消失！确定触发网页白屏拦截！")
+                                            raise RuntimeError("PAGE_BLOCKED_MISSING_NEXT_BTN")
+                                        # 👆👆👆 ========================================= 👆👆👆
+
+                                    if (existing_count + len(all_data)) >= task_target:
+                                        is_task_completely_finished = True
+                                        break
+                                # ========================= while True 翻页循环结束 =========================
+
+                                # 👇👇👇 [核心修改：跨月/切片冷却机制] 👇👇👇
+                                if is_task_completely_finished:
+                                    t_print(f"✅ 任务【{current_task['desc']}】所有数据已全部落袋！")
+                                    t_print("   ⏳ [切片换挡冷却] 彻底关闭浏览器并进入 3 分钟深度休眠...")
+                                    kill_browser()
+                                    time.sleep(random.uniform(180, 210))
+                                    break
+                                # 👆👆👆 ===================================== 👆👆👆
+
+                            # 👇 如果 step_2_setup_search (检索) 失败，进入这里
+                            else:
+                                consecutive_failures += 1
+                                t_print(f"❌ 检索失败，重试 ({consecutive_failures}/3)...")
+                                time.sleep(5)
+
+                        # 👇 如果 debug_login_process (登录) 失败，进入这里
+                        else:
+                            consecutive_failures += 1
+                            t_print(f"❌ 登录失败，重试 ({consecutive_failures}/3)...")
+                            time.sleep(5)
+
+                    # 👇 如果 page (浏览器连接) 失败，进入这里
+                    else:
+                        consecutive_failures += 1
+                        t_print(f"❌ 无法连接浏览器，重试 ({consecutive_failures}/3)...")
+                        time.sleep(10)
+
+                except Exception as inner_error:
+                    if "WAF_IP_BLOCKED" in str(inner_error) or "PAGE_BLOCKED_MISSING_NEXT_BTN" in str(inner_error):
+                        t_print("\n" + "🌋" * 20)
+                        t_print(f"🚨 [最高警报] 检测到 IP 级封锁或致命白屏 ({inner_error})！")
+                        t_print("   🛑 此时换号死磕等同于自杀！全军就地扎营，强制休眠 3 分钟等待 IP 冷却...")
+                        t_print("🌋" * 20 + "\n")
+                        kill_browser()
+                        time.sleep(180)  # 👈 封锁后休眠 180s (3分钟)，如需改回30分钟请改成 1800
+                        consecutive_failures = 0
+                        continue
+
+                    consecutive_failures += 1
+                    t_print(f"⚠️ 局部异常: {inner_error}，累计失败 ({consecutive_failures}/3)")
+                    time.sleep(5)
+
+                if consecutive_failures >= 3:
+                    t_print(f"\n🚨 [容错降级] 账号 {current_acc['u']} 连续 3 次突围失败！")
+                    t_print(f"   🔄 正在将其移至队列最末尾避风头，换将上阵...")
+
+                    bad_acc = ACCOUNT_POOL.pop(CURRENT_ACC_INDEX)
+                    ACCOUNT_POOL.append(bad_acc)
+
+                    if CURRENT_ACC_INDEX == len(ACCOUNT_POOL) - 1:
+                        CURRENT_ACC_INDEX = 0
+
+                    consecutive_failures = 0
+                    TOTAL_SESSION_DOWNLOADS = 0
+                    ACCOUNTS_USED_TODAY += 1
+
+                    if ACCOUNTS_USED_TODAY > len(ACCOUNT_POOL):
+                        t_print("\n" + "🛑" * 25)
+                        t_print(f"⛔   所有账号均已尝试且挂掉，触发保护性安全停机。")
+                        t_print("🛑" * 25 + "\n")
+                        kill_browser()
+                        sys.exit(0)
+
+                    time.sleep(10)
+                    continue
+
+            task_idx += 1
+
+    except KeyboardInterrupt:
+        print("\n👋 用户手动停止。")
+    except SystemExit:
+        input("\n🛑 程序已主动触发安全停机。按【回车键】关闭窗口...")
+    except Exception as e:
+        import traceback
+
+        print("\n" + "💥" * 20)
+        print("致命全局异常导致程序崩溃，错误详情如下：")
+        print(traceback.format_exc())
+        print("💥" * 20)
+        input("\n🛑 请截图以上错误发给助手。按【回车键】关闭窗口...")
+    finally:
+        kill_browser()
+        print("✨ 结束。")
