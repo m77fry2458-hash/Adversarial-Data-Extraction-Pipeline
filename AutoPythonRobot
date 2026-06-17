@@ -748,7 +748,7 @@ if __name__ == "__main__":
 
                 try:
                     if page:
-                        page.get("https://wenshu.court.gov.cn/")
+                        page.get(" URL  ")
                         bio_wandering(page)
 
                         if debug_login_process(page, current_acc['u'], current_acc['p']):
